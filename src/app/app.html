@@ -1,0 +1,10 @@
+<h1>🔥 FLAMES Game 🔥</h1>
+
+<div class="container">
+  <input type="text" placeholder="Your Name" [(ngModel)]="name1" />
+  <input type="text" placeholder="Crush Name" [(ngModel)]="name2" />
+
+  <button (click)="calculateFlames()">Calculate</button>
+
+  <h2 *ngIf="result">Result: {{ result }}</h2>
+</div>
