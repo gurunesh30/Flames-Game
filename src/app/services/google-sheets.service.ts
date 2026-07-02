@@ -11,7 +11,7 @@ export interface FlamesResult {
   providedIn: 'root'
 })
 export class GoogleSheetsService {
-  private readonly sheetUrl = 'https://script.google.com/macros/s/AKfycbwCfv3ko2tqXuACUMDwCUYSl2m2QCz8fzENb1jC5OvPIz7UXCGlTDenthryile6uA5m9w/exec';
+  private readonly sheetUrl = 'https://script.google.com/macros/s/AKfycbywo8hbN4E1qXdun43DBQG0oEcuhGP4457luXeKwKafYaPhWofzgok1t3xZYdaz7oRI/exec';
 
   constructor() {}
 
