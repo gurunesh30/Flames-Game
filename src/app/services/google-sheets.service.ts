@@ -11,7 +11,8 @@ export interface FlamesResult {
   providedIn: 'root'
 })
 export class GoogleSheetsService {
-  private readonly sheetUrl = 'https://script.google.com/macros/s/AKfycbywo8hbN4E1qXdun43DBQG0oEcuhGP4457luXeKwKafYaPhWofzgok1t3xZYdaz7oRI/exec';
+  // Your live Apps Script deployment URL
+  private readonly sheetUrl = 'https://script.google.com/macros/s/AKfycbxG04Un1kpGtL2wWKL3AgCmPdU8WkQu-4eyizReDpC2xylJXfpbhP0s4qaK2Zh4i5iu/exec';
 
   constructor() {}
 
@@ -23,25 +24,31 @@ export class GoogleSheetsService {
    */
   async saveResult(name1: string, name2: string, result: string): Promise<void> {
     const timestamp = new Date().toISOString();
-    const payload: FlamesResult = { name1, name2, result, timestamp };
+    
+    // URLSearchParams automatically handles all spaces and special characters.
+    const params = new URLSearchParams({
+      name1: name1,
+      name2: name2,
+      result: result,
+      timestamp: timestamp
+    });
 
     try {
-      // Using Google Apps Script Web App endpoint
-      // Replace the URL above with your actual deployed Apps Script URL
-      const response = await fetch(this.sheetUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      // 1. Removed mode: 'no-cors' so fetch can natively handle Google's redirect.
+      // 2. Kept as GET request because Apps Script redirects GETs perfectly without preflight CORS blocks.
+      const response = await fetch(`${this.sheetUrl}?${params.toString()}`, {
+        method: 'GET'
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to save: ${response.status}`);
+        throw new Error(`Network response was not ok. Status: ${response.status}`);
       }
 
-      console.log('Result saved successfully');
+      // Read the backend success message from Google Apps Script
+      const data = await response.json();
+      console.log('Successfully saved to Google Sheet!', data);
     } catch (error) {
-      console.error('Failed to save result:', error);
-      // Silently fail - don't show errors to users
+      console.error('Failed to save result to Google Sheet:', error);
     }
   }
 }
