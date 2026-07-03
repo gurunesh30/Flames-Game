@@ -1,5 +1,6 @@
-﻿import { Component, ElementRef, ViewChild, AfterViewInit, NgZone } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { UpperCasePipe, LowerCasePipe } from '@angular/common';
 import { GoogleSheetsService } from './services/google-sheets.service';
 import gsap from 'gsap';
 import confetti from 'canvas-confetti';
@@ -10,13 +11,14 @@ interface FLetter { char: string; active: boolean; eliminated: boolean; winner: 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, UpperCasePipe, LowerCasePipe],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class AppComponent implements AfterViewInit {
   @ViewChild('landingEl') landingEl!: ElementRef<HTMLElement>;
   @ViewChild('calcEl')    calcEl!: ElementRef<HTMLElement>;
+  @ViewChild('calcMainEl') calcMainEl!: ElementRef<HTMLElement>;
   @ViewChild('resultCard') resultCard!: ElementRef<HTMLElement>;
   @ViewChild('ball') ballEl!: ElementRef<HTMLElement>;
 
@@ -37,7 +39,7 @@ export class AppComponent implements AfterViewInit {
   };
   private readonly FLAMES = ['F','L','A','M','E','S'];
 
-  constructor(private zone: NgZone, private sheets: GoogleSheetsService) {}
+  constructor(private zone: NgZone, private sheets: GoogleSheetsService, private cdr: ChangeDetectorRef) {}
 
   ngAfterViewInit() {
     gsap.set(this.calcEl.nativeElement, { x: '100%', autoAlpha: 0 });
@@ -66,8 +68,10 @@ export class AppComponent implements AfterViewInit {
     this.name1Letters = this.name1.toLowerCase().replace(/\s/g,'').split('').map(c=>({ char:c, strikeout:false }));
     this.name2Letters = this.name2.toLowerCase().replace(/\s/g,'').split('').map(c=>({ char:c, strikeout:false }));
     this.flamesLetters = this.FLAMES.map((c,i)=>({ char:c, active:true, eliminated:false, winner:false }));
+    this.resultCard.nativeElement.style.pointerEvents = 'none';
     gsap.set(this.resultCard.nativeElement, { autoAlpha: 0, scale: 0.5, rotation: -15, y: 30 });
     gsap.set(this.ballEl.nativeElement, { x: 0, y: 0, scale: 1, autoAlpha: 0 });
+    this.cdr.detectChanges();
 
     const tl = gsap.timeline({
       onComplete: () => this.zone.run(() => setTimeout(() => this.runCalculation(), 100))
@@ -81,14 +85,15 @@ export class AppComponent implements AfterViewInit {
     this.name1Letters = [...this.name1Letters];
     this.name2Letters = [...this.name2Letters];
     this.flamesLetters = [...this.flamesLetters];
+    this.countLabel = 'Comparing letters...';
+    this.cdr.detectChanges();
 
     // Animate tiles entrance
     gsap.fromTo('.ftile', { y: -60, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.5, stagger: 0.1, ease: 'bounce.out' });
 
-    // Show ball at start position
+    // Hide ball initially
     const ball = this.ballEl.nativeElement;
-    gsap.set(ball, { x: 0, y: 0, scale: 1, autoAlpha: 1 });
-    this.countLabel = 'Eliminating letters...';
+    gsap.set(ball, { scale: 0, autoAlpha: 0 });
 
     setTimeout(() => this.animateElimination(), 800);
   }
@@ -96,7 +101,6 @@ export class AppComponent implements AfterViewInit {
   async animateElimination() {
     const n1 = this.name1Letters;
     const n2 = this.name2Letters;
-    let eliminated: string[] = [];
 
     for (let i = 0; i < n1.length; i++) {
       if (n1[i].strikeout) continue;
@@ -104,20 +108,28 @@ export class AppComponent implements AfterViewInit {
         if (!n2[j].strikeout && n1[i].char === n2[j].char) {
           n1[i].strikeout = true;
           n2[j].strikeout = true;
-          eliminated.push(n1[i].char);
-          this.name1Letters = [...n1];
-          this.name2Letters = [...n2];
-          await this.delay(200);
+
+          // Must run inside zone so Angular detects the change and applies .struck class
+          this.zone.run(() => {
+            this.name1Letters = [...n1];
+            this.name2Letters = [...n2];
+          });
+          this.cdr.detectChanges();
+
+          await this.delay(300);
           break;
         }
       }
     }
 
-    const count = n1.filter(l=>!l.strikeout).length + n2.filter(l=>!l.strikeout).length;
+    const count = n1.filter(l => !l.strikeout).length + n2.filter(l => !l.strikeout).length;
     const c = count === 0 ? 1 : count;
 
-    this.countLabel = `Ball will bounce ${c} time${c>1?'s':''} through FLAMES...`;
-    await this.delay(600);
+    this.zone.run(() => {
+      this.countLabel = `${c} letter${c > 1 ? 's' : ''} remaining. Preparing oracle...`;
+    });
+    this.cdr.detectChanges();
+    await this.delay(1000);
 
     // Ball bouncing animation through FLAMES
     await this.runBouncingBall(c);
@@ -125,57 +137,97 @@ export class AppComponent implements AfterViewInit {
 
   async runBouncingBall(count: number) {
     const ball = this.ballEl.nativeElement;
+    const calcMain = this.calcMainEl.nativeElement;
     let activeTiles = [...this.FLAMES];
     let currentIdx = 0;
-    const totalBounces = count;
 
-    for (let bounce = 0; bounce < totalBounces + activeTiles.length - 1; bounce++) {
-      // Move ball to next tile
-      currentIdx = currentIdx % activeTiles.length;
-      const origIdx = this.FLAMES.indexOf(activeTiles[currentIdx]);
-      const tile = this.calcEl.nativeElement.querySelector<HTMLElement>(`[data-idx="${origIdx}"]`);
+    // Helper: get ball target position relative to .calc-main (the ball's positioned ancestor)
+    const getBallPos = (tile: HTMLElement) => {
+      const mainRect = calcMain.getBoundingClientRect();
+      const tileRect = tile.getBoundingClientRect();
+      return {
+        x: tileRect.left - mainRect.left + tileRect.width / 2 - 16,
+        y: tileRect.top - mainRect.top + tileRect.height / 2 - 16
+      };
+    };
 
-      if (tile) {
-        const rect = tile.getBoundingClientRect();
-        const ballRect = ball.getBoundingClientRect();
-        const dx = rect.left + rect.width/2 - ballRect.left - ballRect.width/2;
-        const dy = rect.top + rect.height/2 - ballRect.top - ballRect.height/2;
-
-        // Bounce up to the tile
-        await new Promise<void>(resolve => {
-          gsap.to(ball, {
-            x: dx, y: dy - 50,
-            duration: 0.25, ease: 'power2.out',
-            onComplete: () => resolve()
-          });
-        });
-
-        // Drop down (bounce)
-        await new Promise<void>(resolve => {
-          gsap.to(ball, {
-            y: dy + 20,
-            duration: 0.2, ease: 'bounce.out',
-            onComplete: () => resolve()
-          });
-        });
-      }
-
-      // Eliminate current letter
-      const elim = activeTiles[currentIdx];
-      this.zone.run(() => {
-        const fl = this.flamesLetters.find(f => f.char === elim);
-        if (fl) { fl.active = false; fl.eliminated = true; }
+    // Position ball at the first tile and fade in
+    const firstTile = calcMain.querySelector<HTMLElement>(`[data-idx="0"]`);
+    if (firstTile) {
+      const pos = getBallPos(firstTile);
+      gsap.set(ball, { x: pos.x, y: pos.y, scale: 0, autoAlpha: 1 });
+      this.cdr.detectChanges();
+      await new Promise<void>(resolve => {
+        gsap.to(ball, { scale: 1, duration: 0.3, ease: 'back.out(2)', onComplete: () => resolve() });
       });
-
-      // Remove from active
-      activeTiles.splice(currentIdx, 1);
-      if (currentIdx >= activeTiles.length) currentIdx = 0;
-
-      this.countLabel = `Eliminating ${elim}...`;
-      await this.delay(300);
     }
 
-    // Result!
+    // Loop until 1 tile remains
+    while (activeTiles.length > 1) {
+      // Count `count` steps
+      for (let step = 0; step < count; step++) {
+        const tempIdx = (currentIdx + step) % activeTiles.length;
+        const letter = activeTiles[tempIdx];
+        const origIdx = this.FLAMES.indexOf(letter);
+        const tile = calcMain.querySelector<HTMLElement>(`[data-idx="${origIdx}"]`);
+
+        if (tile) {
+          const pos = getBallPos(tile);
+
+          this.zone.run(() => {
+            this.countLabel = `Counting... ${step + 1} (${letter})`;
+          });
+          this.cdr.detectChanges();
+
+          // Animate bounce: hop up then land on tile
+          await new Promise<void>(resolve => {
+            const tl = gsap.timeline({ onComplete: () => resolve() });
+            tl.to(ball, {
+              x: pos.x,
+              y: pos.y - 35,
+              duration: 0.18,
+              ease: 'power2.out'
+            })
+            .to(ball, {
+              y: pos.y,
+              duration: 0.14,
+              ease: 'power1.in',
+              onStart: () => {
+                gsap.fromTo(tile, { scale: 0.92 }, { scale: 1, duration: 0.2 });
+              }
+            });
+          });
+        }
+      }
+
+      // Eliminate the tile at the end of this round
+      const elimIdx = (currentIdx + count - 1) % activeTiles.length;
+      const elimLetter = activeTiles[elimIdx];
+      
+      this.zone.run(() => {
+        this.countLabel = `Eliminating: ${this.meanings[elimLetter]}...`;
+        const fl = this.flamesLetters.find(f => f.char === elimLetter);
+        if (fl) {
+          fl.active = false;
+          fl.eliminated = true;
+        }
+        this.flamesLetters = [...this.flamesLetters];
+      });
+      this.cdr.detectChanges();
+
+      // Remove from activeTiles
+      activeTiles.splice(elimIdx, 1);
+      
+      // Next round starts from the letter immediately after the eliminated one
+      currentIdx = elimIdx;
+      if (currentIdx >= activeTiles.length) {
+        currentIdx = 0;
+      }
+
+      await this.delay(800);
+    }
+
+    // Result tile is the only one remaining
     const finalChar = activeTiles[0];
     this.zone.run(() => {
       this.result = finalChar;
@@ -183,8 +235,14 @@ export class AppComponent implements AfterViewInit {
       this.isCalculating = false;
       this.countLabel = '';
       const fl = this.flamesLetters.find(f => f.char === finalChar);
-      if (fl) { fl.winner = true; fl.active = true; fl.eliminated = false; }
+      if (fl) {
+        fl.winner = true;
+        fl.active = true;
+        fl.eliminated = false;
+      }
+      this.flamesLetters = [...this.flamesLetters];
     });
+    this.cdr.detectChanges();
 
     // Hide ball
     gsap.to(ball, { autoAlpha: 0, scale: 0, duration: 0.3 });
@@ -194,10 +252,16 @@ export class AppComponent implements AfterViewInit {
     // Trigger confetti!
     this.triggerConfetti();
 
-    // Reveal result card
-    gsap.to(this.resultCard.nativeElement, {
-      autoAlpha: 1, scale: 1, rotation: 0, y: 0,
-      duration: 0.8, ease: 'elastic.out(1, 0.5)'
+    // Reveal result card — also enable pointer-events so button is clickable
+    const card = this.resultCard.nativeElement;
+    card.style.pointerEvents = 'auto';
+    gsap.to(card, {
+      autoAlpha: 1,
+      scale: 1,
+      rotation: 0,
+      y: 0,
+      duration: 0.8,
+      ease: 'elastic.out(1, 0.5)'
     });
 
     this.sheets.saveResult(this.name1, this.name2, this.finalResult);
@@ -213,25 +277,24 @@ export class AppComponent implements AfterViewInit {
         angle: 60,
         spread: 55,
         origin: { x: 0, y: 0.7 },
-        colors: ['#ff2d6b', '#ff7b3a', '#8b5cf6', '#06b6d4', '#f59e0b']
+        colors: ['#abecfe', '#ff7b3a', '#8b5cf6', '#06b6d4', '#f59e0b']
       });
       confetti({
         particleCount: 5,
         angle: 120,
         spread: 55,
         origin: { x: 1, y: 0.7 },
-        colors: ['#ff2d6b', '#ff7b3a', '#8b5cf6', '#06b6d4', '#f59e0b']
+        colors: ['#abecfe', '#ff7b3a', '#8b5cf6', '#06b6d4', '#f59e0b']
       });
       if (Date.now() < end) requestAnimationFrame(frame);
     })();
 
-    // Big burst from center
     setTimeout(() => {
       confetti({
         particleCount: 150,
         spread: 100,
         origin: { x: 0.5, y: 0.6 },
-        colors: ['#ff2d6b', '#ff7b3a', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981']
+        colors: ['#abecfe', '#ff7b3a', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981']
       });
     }, 300);
   }
@@ -247,6 +310,7 @@ export class AppComponent implements AfterViewInit {
         this.isCalculating = false;
         this.countLabel = '';
         this.animateLanding();
+        this.cdr.detectChanges();
       })
     });
     tl.to(calc,      { x: '100%', autoAlpha: 0, duration: 0.5, ease: 'power3.inOut' })

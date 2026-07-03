@@ -1,52 +1,58 @@
 {
-  "hash": "0df199f9",
-  "configHash": "b45023d6",
-  "lockfileHash": "a5ab03a3",
-  "browserHash": "e4f1f337",
+  "hash": "67fab374",
+  "configHash": "d1765d65",
+  "lockfileHash": "072c550b",
+  "browserHash": "7801679c",
   "optimized": {
+    "@angular/common": {
+      "src": "../../../../../../node_modules/@angular/common/fesm2022/common.mjs",
+      "file": "@angular_common.js",
+      "fileHash": "67efb634",
+      "needsInterop": false
+    },
     "@angular/core": {
       "src": "../../../../../../node_modules/@angular/core/fesm2022/core.mjs",
       "file": "@angular_core.js",
-      "fileHash": "4ecf2bc8",
+      "fileHash": "07519810",
       "needsInterop": false
     },
     "@angular/forms": {
       "src": "../../../../../../node_modules/@angular/forms/fesm2022/forms.mjs",
       "file": "@angular_forms.js",
-      "fileHash": "63ade220",
+      "fileHash": "a84a5a55",
       "needsInterop": false
     },
     "@angular/platform-browser": {
       "src": "../../../../../../node_modules/@angular/platform-browser/fesm2022/platform-browser.mjs",
       "file": "@angular_platform-browser.js",
-      "fileHash": "888107b6",
+      "fileHash": "5bd4da61",
       "needsInterop": false
     },
     "@angular/router": {
       "src": "../../../../../../node_modules/@angular/router/fesm2022/router.mjs",
       "file": "@angular_router.js",
-      "fileHash": "053ce9e3",
+      "fileHash": "e14feb97",
       "needsInterop": false
     },
     "canvas-confetti": {
       "src": "../../../../../../node_modules/canvas-confetti/dist/confetti.module.mjs",
       "file": "canvas-confetti.js",
-      "fileHash": "81caeb99",
+      "fileHash": "9e7f9ceb",
       "needsInterop": false
     },
     "gsap": {
       "src": "../../../../../../node_modules/gsap/index.js",
       "file": "gsap.js",
-      "fileHash": "a4bd32d0",
+      "fileHash": "c484422e",
       "needsInterop": false
     }
   },
   "chunks": {
-    "chunk-VN6YKDDM": {
-      "file": "chunk-VN6YKDDM.js"
+    "chunk-VJHALN3G": {
+      "file": "chunk-VJHALN3G.js"
     },
-    "chunk-XVZVTARV": {
-      "file": "chunk-XVZVTARV.js"
+    "chunk-PLKX2XRD": {
+      "file": "chunk-PLKX2XRD.js"
     },
     "chunk-2ISLE7OS": {
       "file": "chunk-2ISLE7OS.js"
