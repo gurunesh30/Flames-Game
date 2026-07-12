@@ -825,3 +825,45 @@
     margin-top: 3px;
   }
 }
+.gun-animation {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gun {
+  font-size: 80px;
+  display: block;
+  text-align: center;
+  filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.5));
+}
+
+.gun-flash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 255, 200, 0.8), rgba(255, 200, 0, 0.4), transparent);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Add a special result style */
+.special-result {
+  color: #ff6b6b;
+  font-weight: bold;
+  text-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
