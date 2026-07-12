@@ -21,6 +21,7 @@ export class AppComponent implements AfterViewInit {
   @ViewChild('calcMainEl') calcMainEl!: ElementRef<HTMLElement>;
   @ViewChild('resultCard') resultCard!: ElementRef<HTMLElement>;
   @ViewChild('ball') ballEl!: ElementRef<HTMLElement>;
+  @ViewChild('gunAnimation') gunAnimationEl!: ElementRef<HTMLElement>;
 
   name1 = '';
   name2 = '';
@@ -29,6 +30,8 @@ export class AppComponent implements AfterViewInit {
   countLabel = '';
   isCalculating = false;
   ballPosition = 0;
+  showGunAnimation = false;
+  specialResult = '';
 
   name1Letters: Letter[] = [];
   name2Letters: Letter[] = [];
@@ -45,6 +48,7 @@ export class AppComponent implements AfterViewInit {
     gsap.set(this.calcEl.nativeElement, { x: '100%', autoAlpha: 0 });
     gsap.set(this.resultCard.nativeElement, { autoAlpha: 0, scale: 0.5, rotation: -15 });
     gsap.set(this.ballEl.nativeElement, { x: 0, y: 0, scale: 1, autoAlpha: 0 });
+    gsap.set(this.gunAnimationEl.nativeElement, { autoAlpha: 0, scale: 0 });
     this.animateLanding();
   }
 
@@ -56,15 +60,208 @@ export class AppComponent implements AfterViewInit {
       .fromTo('.cta-btn',    { scale: 0.8, autoAlpha: 0 }, { scale: 1, autoAlpha: 1, duration: 0.5, ease: 'back.out(2)' }, '-=0.2');
   }
 
+  // Check for special names before starting calculation
+  checkSpecialNames(): boolean {
+    const name1Lower = this.name1.toLowerCase().trim();
+    const name2Lower = this.name2.toLowerCase().trim();
+
+    // Check if either name is "vignesh"
+    if (name1Lower === 'vignesh' || name2Lower === 'vignesh') {
+      this.showSpecialResult('taken');
+      return true;
+    }
+
+    // Check if either name is "gurunesh"
+    if (name1Lower === 'gurunesh' || name2Lower === 'gurunesh') {
+      this.showSpecialResult('sorry he has a wife');
+      return true;
+    }
+
+    // Check if either name is "santhoshkumar"
+    if (name1Lower === 'santhoshkumar' || name2Lower === 'santhoshkumar') {
+      this.showGunAnimation = true;
+      this.showSpecialResult('');
+      this.triggerGunAnimation();
+      return true;
+    }
+
+    return false;
+  }
+
+  showSpecialResult(message: string) {
+    this.specialResult = message;
+    this.finalResult = message;
+    this.isCalculating = false;
+    this.countLabel = '';
+    
+    // Show result card with special message
+    const card = this.resultCard.nativeElement;
+    card.style.pointerEvents = 'auto';
+    gsap.to(card, {
+      autoAlpha: 1,
+      scale: 1,
+      rotation: 0,
+      y: 0,
+      duration: 0.8,
+      ease: 'elastic.out(1, 0.5)'
+    });
+  }
+
+  triggerGunAnimation() {
+    const gunEl = this.gunAnimationEl.nativeElement;
+    
+    // Show gun with dramatic entrance
+    gsap.to(gunEl, {
+      autoAlpha: 1,
+      scale: 1,
+      duration: 0.5,
+      ease: 'back.out(2)'
+    });
+
+    // Create shooting animation sequence
+    const tl = gsap.timeline();
+    
+    // Gun recoil animation
+    tl.to(gunEl, {
+      x: -10,
+      rotation: -5,
+      duration: 0.1,
+      ease: 'power2.out'
+    })
+    .to(gunEl, {
+      x: 0,
+      rotation: 0,
+      duration: 0.2,
+      ease: 'back.out(1.5)'
+    })
+    .to(gunEl, {
+      x: -15,
+      rotation: -8,
+      duration: 0.1,
+      ease: 'power2.out'
+    })
+    .to(gunEl, {
+      x: 0,
+      rotation: 0,
+      duration: 0.3,
+      ease: 'back.out(2)'
+    })
+    .to(gunEl, {
+      scale: 1.2,
+      duration: 0.1,
+      ease: 'power2.out'
+    })
+    .to(gunEl, {
+      scale: 1,
+      duration: 0.2,
+      ease: 'back.out(1.5)'
+    });
+
+    // Flash effect
+    setTimeout(() => {
+      document.body.style.backgroundColor = '#fff';
+      setTimeout(() => {
+        document.body.style.backgroundColor = '';
+      }, 100);
+    }, 200);
+
+    // Show result after gun animation
+    setTimeout(() => {
+      this.zone.run(() => {
+        this.specialResult = '💀 Eliminated!';
+        this.finalResult = '💀 Eliminated!';
+        this.isCalculating = false;
+        this.countLabel = '';
+        
+        // Hide gun
+        gsap.to(gunEl, {
+          autoAlpha: 0,
+          scale: 0,
+          duration: 0.5,
+          ease: 'power2.in'
+        });
+
+        // Show result card
+        const card = this.resultCard.nativeElement;
+        card.style.pointerEvents = 'auto';
+        gsap.to(card, {
+          autoAlpha: 1,
+          scale: 1,
+          rotation: 0,
+          y: 0,
+          duration: 0.8,
+          ease: 'elastic.out(1, 0.5)'
+        });
+
+        // Add dramatic confetti (red themed)
+        this.triggerSpecialConfetti();
+      });
+      this.cdr.detectChanges();
+    }, 1500);
+  }
+
+  triggerSpecialConfetti() {
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    (function frame() {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.7 },
+        colors: ['#ff0000', '#cc0000', '#990000', '#ff3333', '#ff6666']
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.7 },
+        colors: ['#ff0000', '#cc0000', '#990000', '#ff3333', '#ff6666']
+      });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    })();
+
+    setTimeout(() => {
+      confetti({
+        particleCount: 100,
+        spread: 100,
+        origin: { x: 0.5, y: 0.6 },
+        colors: ['#ff0000', '#cc0000', '#990000', '#ff3333', '#ff6666', '#ff9999']
+      });
+    }, 300);
+  }
+
   goCalculate() {
     if (!this.name1.trim() || !this.name2.trim()) return;
 
+    // Check for special names first
+    if (this.checkSpecialNames()) {
+      // If special name found, skip the normal calculation but still show the calculation view
+      const landing = this.landingEl.nativeElement;
+      const calc    = this.calcEl.nativeElement;
+
+      const tl = gsap.timeline();
+      tl.to(landing, { x: '-100%', autoAlpha: 0, duration: 0.5, ease: 'power3.inOut' })
+        .fromTo(calc, { x: '100%', autoAlpha: 0 }, { x: '0%', autoAlpha: 1, duration: 0.5, ease: 'power3.inOut' }, '-=0.25');
+      
+      // For santhoshkumar, show gun animation after transition
+      if (this.showGunAnimation) {
+        setTimeout(() => {
+          this.triggerGunAnimation();
+        }, 800);
+      }
+      return;
+    }
+
+    // Normal calculation flow
     const landing = this.landingEl.nativeElement;
     const calc    = this.calcEl.nativeElement;
 
     this.result = '';
     this.finalResult = '';
     this.countLabel = '';
+    this.specialResult = '';
     this.name1Letters = this.name1.toLowerCase().replace(/\s/g,'').split('').map(c=>({ char:c, strikeout:false }));
     this.name2Letters = this.name2.toLowerCase().replace(/\s/g,'').split('').map(c=>({ char:c, strikeout:false }));
     this.flamesLetters = this.FLAMES.map((c,i)=>({ char:c, active:true, eliminated:false, winner:false }));
@@ -303,12 +500,25 @@ export class AppComponent implements AfterViewInit {
     const landing = this.landingEl.nativeElement;
     const calc    = this.calcEl.nativeElement;
 
+    // Reset special states
+    this.showGunAnimation = false;
+    this.specialResult = '';
+    
+    // Hide gun if visible
+    gsap.to(this.gunAnimationEl.nativeElement, {
+      autoAlpha: 0,
+      scale: 0,
+      duration: 0.3
+    });
+
     const tl = gsap.timeline({
       onComplete: () => this.zone.run(() => {
         this.name1 = ''; this.name2 = '';
         this.result = ''; this.finalResult = '';
         this.isCalculating = false;
         this.countLabel = '';
+        this.specialResult = '';
+        this.showGunAnimation = false;
         this.animateLanding();
         this.cdr.detectChanges();
       })
@@ -319,4 +529,3 @@ export class AppComponent implements AfterViewInit {
 
   delay(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 }
-
