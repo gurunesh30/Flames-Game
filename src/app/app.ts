@@ -66,7 +66,7 @@ export class AppComponent implements AfterViewInit {
     const name2Lower = this.name2.toLowerCase().trim();
 
     // Check if either name is "vignesh"
-    if (name1Lower === 'vignesh' || name2Lower === 'vignesh') {
+    if (name1Lower === 'vignesh' || name2Lower === 'vignesh' || name1Lower === 'shalini' || name2Lower === 'shalini') {
       this.showSpecialResult('taken');
       return true;
     }
