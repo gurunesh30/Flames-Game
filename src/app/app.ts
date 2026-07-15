@@ -71,11 +71,11 @@ export class AppComponent implements AfterViewInit {
       return true;
     }
 
-    // Check if either name is "gurunesh"
-    if (name1Lower === 'gurunesh' || name2Lower === 'gurunesh') {
-      this.showSpecialResult('sorry he has a wife');
-      return true;
-    }
+    // // Check if either name is "gurunesh"
+    // if (name1Lower === 'gurunesh' || name2Lower === 'gurunesh') {
+    //   this.showSpecialResult('sorry he has a wife');
+    //   return true;
+    // }
 
     // Check if either name is "santhoshkumar"
     if (name1Lower === 'santhoshkumar' || name2Lower === 'santhoshkumar') {
